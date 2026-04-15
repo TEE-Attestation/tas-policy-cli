@@ -1,0 +1,13 @@
+{
+  "key_id": "test-sev-policy-001",
+  "name": "Sample SEV Policy",
+  "description": "Sample SEV measurement file for testing the create command",
+  "measurement": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+  "processor_family": "genoa",
+  "min_boot_loader_svn": 12,
+  "min_tee_svn": 0,
+  "min_snp_svn": 28,
+  "min_microcode_svn": 88,
+  "vmpl": 0,
+  "svn_only": false
+}

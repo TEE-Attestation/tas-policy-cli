@@ -1,0 +1,13 @@
+{
+  "key_id": "",
+  "name": "Bad SEV Policy",
+  "description": "Intentionally invalid SEV measurement file for negative testing",
+  "measurement": "not_valid_hex_at_all_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+  "host_data": "0001020304",
+  "processor_family": "genoa",
+  "min_boot_loader_svn": 0,
+  "min_tee_svn": 0,
+  "min_snp_svn": 0,
+  "min_microcode_svn": 0,
+  "svn_only": false
+}

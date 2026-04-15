@@ -1,0 +1,16 @@
+{
+  "key_id": "",
+  "name": "Bad TDX Policy",
+  "version": "1.0.0",
+  "description": "Intentionally invalid TDX measurement file for negative testing",
+
+  "mrtd": "not_valid_hex_at_all_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+  "rtmr0": "0001020304",
+  "rtmr1": "",
+
+  "tcb_only": false,
+  "tcb_update": "standard",
+  "platform_tcb": "UpToDate",
+  "tdx_module_tcb": "UpToDate",
+  "qe_tcb": "UpToDate"
+}
