@@ -26,8 +26,8 @@ terminal.
 
 ```bash
 # Clone and build from source
-git clone <your-org>/tas-policy.git
-cd tas-policy
+git clone https://github.com/TEE-Attestation/tas-policy-cli
+cd tas-policy-cli
 cargo build --release
 
 # The binary is at target/release/tas-policy
