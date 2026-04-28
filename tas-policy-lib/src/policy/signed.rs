@@ -239,7 +239,7 @@ impl PolicySignature {
             algorithm: "SHA384".to_string(),
             padding: "PSS".to_string(),
             value: sig.to_base64(),
-            signed_data: Some("validation_rules".to_string()),
+            signed_data: None,
         }
     }
 
@@ -249,7 +249,7 @@ impl PolicySignature {
             algorithm: "SHA384".to_string(),
             padding: "PSS".to_string(),
             value: "<not-yet-signed>".to_string(),
-            signed_data: Some("validation_rules".to_string()),
+            signed_data: None,
         }
     }
 }

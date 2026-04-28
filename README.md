@@ -406,8 +406,7 @@ The resulting policy stored on the server:
     "signature": {
       "algorithm": "SHA384",
       "padding": "PSS",
-      "value": "<base64-encoded-signature>",
-      "signed_data": "validation_rules"
+      "value": "<base64-encoded-signature>"
     }
   }
 }
@@ -476,8 +475,7 @@ The resulting policy stored on the server:
     "signature": {
       "algorithm": "SHA384",
       "padding": "PSS",
-      "value": "<base64-encoded-signature>",
-      "signed_data": "validation_rules"
+      "value": "<base64-encoded-signature>"
     }
   }
 }

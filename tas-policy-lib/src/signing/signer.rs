@@ -3,15 +3,14 @@
 // Copyright 2026 Hewlett Packard Enterprise Development LP.
 // SPDX-License-Identifier: MIT
 //
-// RSA-SHA384-PSS signing that matches the TAS demo_signer.py implementation.
+// RSA-SHA384-PSS signing that matches the TAS server verification.
 // See: https://github.com/TEE-Attestation/tas/blob/main/docs/POLICY.md
 //
 // Signing process (matching TAS server verification):
-// 1. Extract `validation_rules` from the policy
-// 2. Recursively sort all dict keys
-// 3. Serialize to compact JSON (no spaces, sorted keys)
-// 4. Sign with RSA-PSS (SHA-384 hash, MGF1-SHA384, max salt length)
-// 5. Base64-encode the signature
+// 1. Collect all top-level policy fields except `signature`
+// 2. Canonicalize using RFC 8785 (JSON Canonicalization Scheme / JCS)
+// 3. Sign with RSA-PSS (SHA-384 hash, MGF1-SHA384, max salt length)
+// 4. Base64-encode the signature
 
 use rsa::pss::{BlindedSigningKey, Signature as PssSignature};
 use rsa::signature::{RandomizedSigner, SignatureEncoding};
@@ -19,7 +18,7 @@ use sha2::Sha384;
 
 use super::key_loader::SigningKey;
 use crate::error::{Error, Result};
-use crate::policy::signed::{PolicySignature, SignedPolicyEnvelope, ValidationRules};
+use crate::policy::signed::{PolicySignature, SignedPolicyBody, SignedPolicyEnvelope, ValidationRules};
 
 /// RSA-SHA384-PSS signature bytes.
 #[derive(Debug, Clone)]
@@ -35,45 +34,37 @@ impl Signature {
     }
 }
 
-/// Canonicalize a serde_json::Value by recursively sorting object keys.
+/// Produce the canonical JSON bytes of a policy body for signing.
 ///
-/// This matches TAS's `sort_dict_recursively()` in policy_helper.py.
-fn canonicalize(value: &serde_json::Value) -> serde_json::Value {
-    match value {
-        serde_json::Value::Object(map) => {
-            // Collect keys, sort them, then recursively canonicalize values
-            let mut sorted: Vec<(String, serde_json::Value)> = map
-                .iter()
-                .map(|(k, v)| (k.clone(), canonicalize(v)))
-                .collect();
-            sorted.sort_by(|a, b| a.0.cmp(&b.0));
-            serde_json::Value::Object(sorted.into_iter().collect())
-        }
-        serde_json::Value::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(canonicalize).collect())
-        }
-        other => other.clone(),
+/// Matches the TAS server verification process:
+/// 1. Serialize the policy body to a serde_json::Value
+/// 2. Remove the `signature` key from the top-level object
+/// 3. Canonicalize using RFC 8785 JCS
+fn canonical_policy_bytes(body: &SignedPolicyBody) -> Result<Vec<u8>> {
+    let mut value =
+        serde_json::to_value(body).map_err(|e| Error::Serialization(e.to_string()))?;
+
+    // Remove the signature field — it is not part of the signed data
+    if let serde_json::Value::Object(ref mut map) = value {
+        map.remove("signature");
     }
+
+    serde_jcs::to_vec(&value).map_err(|e| Error::Serialization(e.to_string()))
 }
 
 /// Produce the canonical JSON bytes of validation_rules for signing.
 ///
-/// Matches the TAS signing process:
-/// 1. Serialize validation_rules to a serde_json::Value
-/// 2. Recursively sort all object keys
-/// 3. Serialize to compact JSON (no whitespace, sorted keys)
+/// Used when `signed_data` is set to `"validation_rules"` for backward
+/// compatibility with policies that only sign the validation rules.
 fn canonical_validation_rules_bytes(rules: &ValidationRules) -> Result<Vec<u8>> {
     let value = serde_json::to_value(rules).map_err(|e| Error::Serialization(e.to_string()))?;
-    let sorted = canonicalize(&value);
-    let compact =
-        serde_json::to_string(&sorted).map_err(|e| Error::Serialization(e.to_string()))?;
-    Ok(compact.into_bytes())
+    serde_jcs::to_vec(&value).map_err(|e| Error::Serialization(e.to_string()))
 }
 
 /// Sign validation rules with an RSA private key using SHA384-PSS.
 ///
-/// This produces a signature compatible with TAS server verification.
-/// The signed data is the compact JSON of the canonicalized validation_rules.
+/// This produces a signature compatible with TAS server verification
+/// when `signed_data` is `"validation_rules"`.
 pub fn sign_validation_rules(key: &SigningKey, rules: &ValidationRules) -> Result<Signature> {
     let data = canonical_validation_rules_bytes(rules)?;
     let signing_key = BlindedSigningKey::<Sha384>::new(key.private_key.clone());
@@ -87,17 +78,23 @@ pub fn sign_validation_rules(key: &SigningKey, rules: &ValidationRules) -> Resul
 
 /// Sign a policy envelope in place — fills in the real signature.
 ///
-/// This is the main entry point for signing a complete policy.
-/// It extracts the validation_rules, canonicalizes and signs them,
-/// then replaces the placeholder signature with the real one.
+/// Signs all top-level fields except `signature` using RFC 8785 JCS
+/// canonicalization. This is the default TAS server behavior.
 pub fn sign_envelope(key: &SigningKey, envelope: &mut SignedPolicyEnvelope) -> Result<()> {
-    let sig = sign_validation_rules(key, &envelope.policy.validation_rules)?;
+    let data = canonical_policy_bytes(&envelope.policy)?;
+    let signing_key = BlindedSigningKey::<Sha384>::new(key.private_key.clone());
+    let mut rng = rsa::rand_core::OsRng;
+    let pss_sig: PssSignature = signing_key.sign_with_rng(&mut rng, &data);
+
+    let sig = Signature {
+        bytes: pss_sig.to_vec(),
+    };
 
     envelope.policy.signature = PolicySignature {
         algorithm: "SHA384".to_string(),
         padding: "PSS".to_string(),
         value: sig.to_base64(),
-        signed_data: Some("validation_rules".to_string()),
+        signed_data: None,
     };
 
     Ok(())
