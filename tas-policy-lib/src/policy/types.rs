@@ -78,8 +78,12 @@ impl From<SevPolicy> for Policy {
 /// Policy metadata.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PolicyMetadata {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    #[serde(default)]
+    pub policy_type: String,
+    #[serde(default)]
+    pub key_id: String,
+    #[serde(default)]
+    pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

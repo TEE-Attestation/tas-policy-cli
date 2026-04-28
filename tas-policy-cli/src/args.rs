@@ -73,9 +73,9 @@ pub struct CreateArgs {
     #[arg(long)]
     pub signing_key_pass_file: Option<PathBuf>,
 
-    /// Human-readable policy name.
+    /// Human-readable policy name (required).
     #[arg(long)]
-    pub name: Option<String>,
+    pub name: String,
 
     /// Policy description.
     #[arg(long)]

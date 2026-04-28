@@ -140,7 +140,7 @@ impl SevPolicy {
     pub fn merge(&mut self, ov: SevOverrides) -> Result<()> {
         // Metadata
         if let Some(n) = ov.name {
-            self.metadata.name = Some(n);
+            self.metadata.name = n;
         }
         if let Some(d) = ov.description {
             self.metadata.description = Some(d);
@@ -239,7 +239,7 @@ impl SevPolicy {
 pub struct SevConfig {
     pub key_id: String,
     #[serde(default)]
-    pub name: Option<String>,
+    pub name: String,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -407,7 +407,7 @@ impl SevPolicyBuilder {
         }
     }
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.metadata.name = Some(name.into());
+        self.metadata.name = name.into();
         self
     }
     pub fn description(mut self, desc: impl Into<String>) -> Self {

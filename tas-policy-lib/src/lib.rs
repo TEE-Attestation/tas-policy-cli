@@ -103,7 +103,7 @@ pub use policy::{
     CvmType, ExactMatchString, ExactMatchU8, MeasurementHash, MinValue, Policy, PolicyMetadata,
     PolicySignature, ProcessorFamily, SevConfig, SevCurrentTcb, SevOverrides, SevPlatformInfo,
     SevPolicy, SevPolicyBuilder, SevSecurityFlags, SevTcbConfig, SevValidationRules,
-    SignedPolicyBody, SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate, TdxBodyRules,
+    SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate, TdxBodyRules,
     TdxConfig, TdxMeasurements, TdxOverrides, TdxPolicy, TdxPolicyBuilder, TdxTcbRules,
     TdxValidationRules, ValidationError, ValidationRules,
 };

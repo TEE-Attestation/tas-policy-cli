@@ -24,6 +24,6 @@ pub use validation::ValidationError;
 
 pub use signed::{
     ExactMatchString, ExactMatchU8, MinValue, PolicySignature, SevCurrentTcb, SevValidationRules,
-    SignedPolicyBody, SignedPolicyEnvelope, TdxBodyRules, TdxTcbRules, TdxValidationRules,
+    SignedPolicyEnvelope, TdxBodyRules, TdxTcbRules, TdxValidationRules,
     ValidationRules,
 };

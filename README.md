@@ -130,7 +130,7 @@ Create and upload a signed attestation policy. You must specify the CVM type
 | `--key-id` | Unique policy key identifier (required) |
 | `--signing-key` | Path to signing key PEM file (required) |
 | `--signing-key-pass-file` | Path to file containing the signing key passphrase |
-| `--name` | Human-readable policy name |
+| `--name` | Human-readable policy name (required) |
 | `--description` | Policy description |
 | `--dry-run` | Preview the signed policy JSON without uploading |
 
@@ -388,26 +388,24 @@ The resulting policy stored on the server:
 
 ```json
 {
-  "policy_type": "TDX",
-  "key_id": "my-tdx-policy",
-  "policy": {
-    "metadata": {
-      "name": "Default TDX Policy",
-      "description": "Fleet-wide TDX TCB policy"
-    },
-    "validation_rules": {
-      "tcb": {
-        "update": "standard",
-        "platform_tcb": "UpToDate",
-        "tdx_module_tcb": "UpToDate",
-        "qe_tcb": "UpToDate"
-      }
-    },
-    "signature": {
-      "algorithm": "SHA384",
-      "padding": "PSS",
-      "value": "<base64-encoded-signature>"
+  "metadata": {
+    "policy_type": "TDX",
+    "key_id": "my-tdx-policy",
+    "name": "Default TDX Policy",
+    "description": "Fleet-wide TDX TCB policy"
+  },
+  "validation_rules": {
+    "tcb": {
+      "update": "standard",
+      "platform_tcb": "UpToDate",
+      "tdx_module_tcb": "UpToDate",
+      "qe_tcb": "UpToDate"
     }
+  },
+  "signature": {
+    "algorithm": "SHA384",
+    "padding": "PSS",
+    "value": "<base64-encoded-signature>"
   }
 }
 ```
@@ -435,48 +433,46 @@ The resulting policy stored on the server:
 
 ```json
 {
-  "policy_type": "SEV",
-  "key_id": "my-sev-genoa-policy",
-  "policy": {
-    "metadata": {
-      "name": "Default SEV Genoa Policy",
-      "description": "SEV-SNP policy for AMD Genoa processors"
+  "metadata": {
+    "policy_type": "SEV",
+    "key_id": "my-sev-genoa-policy",
+    "name": "Default SEV Genoa Policy",
+    "description": "SEV-SNP policy for AMD Genoa processors"
+  },
+  "validation_rules": {
+    "policy": {
+      "debug_allowed": false,
+      "migrate_ma_allowed": false
     },
-    "validation_rules": {
-      "policy": {
-        "debug_allowed": false,
-        "migrate_ma_allowed": false
-      },
-      "current_tcb": {
-        "bootloader": { "min_value": 12 },
-        "tee":        { "min_value": 0 },
-        "snp":        { "min_value": 28 },
-        "microcode":  { "min_value": 88 }
-      },
-      "committed_tcb": {
-        "bootloader": { "min_value": 12 },
-        "tee":        { "min_value": 0 },
-        "snp":        { "min_value": 28 },
-        "microcode":  { "min_value": 88 }
-      },
-      "launch_tcb": {
-        "bootloader": { "min_value": 12 },
-        "tee":        { "min_value": 0 },
-        "snp":        { "min_value": 28 },
-        "microcode":  { "min_value": 88 }
-      },
-      "platform_info": {
-        "ecc_enabled":          { "boolean": true },
-        "tsme_enabled":         { "boolean": true },
-        "alias_check_complete": { "boolean": true },
-        "smt_enabled":          { "boolean": true }
-      }
+    "current_tcb": {
+      "bootloader": { "min_value": 12 },
+      "tee":        { "min_value": 0 },
+      "snp":        { "min_value": 28 },
+      "microcode":  { "min_value": 88 }
     },
-    "signature": {
-      "algorithm": "SHA384",
-      "padding": "PSS",
-      "value": "<base64-encoded-signature>"
+    "committed_tcb": {
+      "bootloader": { "min_value": 12 },
+      "tee":        { "min_value": 0 },
+      "snp":        { "min_value": 28 },
+      "microcode":  { "min_value": 88 }
+    },
+    "launch_tcb": {
+      "bootloader": { "min_value": 12 },
+      "tee":        { "min_value": 0 },
+      "snp":        { "min_value": 28 },
+      "microcode":  { "min_value": 88 }
+    },
+    "platform_info": {
+      "ecc_enabled":          { "boolean": true },
+      "tsme_enabled":         { "boolean": true },
+      "alias_check_complete": { "boolean": true },
+      "smt_enabled":          { "boolean": true }
     }
+  },
+  "signature": {
+    "algorithm": "SHA384",
+    "padding": "PSS",
+    "value": "<base64-encoded-signature>"
   }
 }
 ```

@@ -28,21 +28,13 @@ use crate::signing::Signature;
 ///
 /// ```json
 /// {
-///   "policy_type": "SEV",
-///   "key_id": "my-secret-id",
-///   "policy": { "metadata": {...}, "validation_rules": {...}, "signature": {...} }
+///   "metadata": { "policy_type": "SEV", "key_id": "my-secret-id", ... },
+///   "validation_rules": {...},
+///   "signature": {...}
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignedPolicyEnvelope {
-    pub policy_type: String,
-    pub key_id: String,
-    pub policy: SignedPolicyBody,
-}
-
-/// Inner body — the complete signed policy.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SignedPolicyBody {
     pub metadata: PolicyMetadata,
     pub validation_rules: ValidationRules,
     pub signature: PolicySignature,
@@ -299,17 +291,17 @@ impl SignedPolicyEnvelope {
         });
 
         Self {
-            policy_type: "TDX".to_string(),
-            key_id: policy.key_id.clone(),
-            policy: SignedPolicyBody {
-                metadata: policy.metadata.clone(),
-                validation_rules: ValidationRules::Tdx(TdxValidationRules {
-                    tcb,
-                    body,
-                    min_tee_tcb_svn: policy.min_tee_tcb_svn,
-                }),
-                signature,
+            metadata: PolicyMetadata {
+                policy_type: "TDX".to_string(),
+                key_id: policy.key_id.clone(),
+                ..policy.metadata.clone()
             },
+            validation_rules: ValidationRules::Tdx(TdxValidationRules {
+                tcb,
+                body,
+                min_tee_tcb_svn: policy.min_tee_tcb_svn,
+            }),
+            signature,
         }
     }
 
@@ -332,11 +324,12 @@ impl SignedPolicyEnvelope {
         });
 
         Self {
-            policy_type: "SEV".to_string(),
-            key_id: policy.key_id.clone(),
-            policy: SignedPolicyBody {
-                metadata: policy.metadata.clone(),
-                validation_rules: ValidationRules::Sev(SevValidationRules {
+            metadata: PolicyMetadata {
+                policy_type: "SEV".to_string(),
+                key_id: policy.key_id.clone(),
+                ..policy.metadata.clone()
+            },
+            validation_rules: ValidationRules::Sev(SevValidationRules {
                     measurement: policy.measurement.as_ref().map(|m| ExactMatchString {
                         exact_match: m.to_hex(),
                     }),
@@ -367,7 +360,6 @@ impl SignedPolicyEnvelope {
                         }),
                 }),
                 signature,
-            },
         }
     }
 
@@ -386,7 +378,8 @@ impl SignedPolicyEnvelope {
     /// This is the reverse of `from_tdx` / `from_sev`, used when fetching
     /// a policy from the TAS server (which returns the envelope format).
     pub fn to_policy(&self) -> Result<super::types::Policy> {
-        match &self.policy.validation_rules {
+        let key_id = self.metadata.key_id.clone();
+        match &self.validation_rules {
             ValidationRules::Tdx(tdx_rules) => {
                 // Convert TdxBodyRules -> TdxMeasurements
                 let measurements = tdx_rules.body.as_ref().and_then(|body| {
@@ -425,8 +418,8 @@ impl SignedPolicyEnvelope {
                 });
 
                 Ok(super::types::Policy::Tdx(TdxPolicy {
-                    key_id: self.key_id.clone(),
-                    metadata: self.policy.metadata.clone(),
+                    key_id,
+                    metadata: self.metadata.clone(),
                     measurements,
                     tcb,
                     min_tee_tcb_svn: tdx_rules.min_tee_tcb_svn,
@@ -460,8 +453,8 @@ impl SignedPolicyEnvelope {
                     });
 
                 Ok(super::types::Policy::Sev(SevPolicy {
-                    key_id: self.key_id.clone(),
-                    metadata: self.policy.metadata.clone(),
+                    key_id,
+                    metadata: self.metadata.clone(),
                     measurement,
                     tcb,
                     policy_flags: sev_rules.policy.clone(),

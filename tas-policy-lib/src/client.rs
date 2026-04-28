@@ -162,7 +162,11 @@ impl TasClient {
 
         Ok(ApiResponse::new(
             CreateResult {
-                policy_key: format!("policy:{}:{}", envelope.policy_type, envelope.key_id),
+                policy_key: format!(
+                    "policy:{}:{}",
+                    envelope.metadata.policy_type,
+                    envelope.metadata.key_id
+                ),
                 cvm_type: policy.cvm_type(),
             },
             Some(deprecation),
@@ -975,7 +979,7 @@ pub struct ValidationReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetPolicyResponse {
     pub policy_key: String,
-    pub policy: crate::policy::signed::SignedPolicyBody,
+    pub policy: crate::policy::signed::SignedPolicyEnvelope,
 }
 
 impl GetPolicyResponse {
@@ -992,8 +996,6 @@ impl GetPolicyResponse {
             self.policy_key.clone()
         };
 
-        // Build a SignedPolicyEnvelope from the response to reuse the existing
-        // to_policy() conversion logic.
         let policy_type = if parts.len() >= 2 {
             parts[1].to_string()
         } else {
@@ -1004,11 +1006,10 @@ impl GetPolicyResponse {
             }
         };
 
-        let envelope = SignedPolicyEnvelope {
-            policy_type,
-            key_id,
-            policy: self.policy.clone(),
-        };
+        // Build an envelope with policy_type/key_id in metadata for to_policy()
+        let mut envelope = self.policy.clone();
+        envelope.metadata.policy_type = policy_type;
+        envelope.metadata.key_id = key_id;
         envelope.to_policy()
     }
 }

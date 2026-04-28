@@ -108,7 +108,7 @@ impl TdxPolicy {
     pub fn merge(&mut self, ov: TdxOverrides) -> Result<()> {
         // Metadata
         if let Some(n) = ov.name {
-            self.metadata.name = Some(n);
+            self.metadata.name = n;
         }
         if let Some(d) = ov.description {
             self.metadata.description = Some(d);
@@ -172,7 +172,7 @@ impl TdxPolicy {
 pub struct TdxConfig {
     pub key_id: String,
     #[serde(default)]
-    pub name: Option<String>,
+    pub name: String,
     #[serde(default)]
     pub version: Option<String>,
     #[serde(default)]
@@ -287,7 +287,7 @@ impl TdxPolicyBuilder {
         }
     }
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.metadata.name = Some(name.into());
+        self.metadata.name = name.into();
         self
     }
     pub fn version(mut self, version: impl Into<String>) -> Self {
