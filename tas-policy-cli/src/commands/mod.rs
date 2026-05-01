@@ -5,9 +5,11 @@
 //
 // This module provides the CLI command implementations.
 
+pub mod add;
 pub mod create;
 pub mod delete;
 pub mod get;
 pub mod healthcheck;
 pub mod list;
+pub mod remove;
 pub mod update;

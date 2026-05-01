@@ -41,6 +41,10 @@ enum Commands {
     Get(commands::get::GetArgs),
     /// Check connectivity to the TAS server.
     Healthcheck,
+    /// Add a policy (experimental: creates or increments count).
+    Add(args::CreateArgs),
+    /// Remove a policy (experimental: decrements count or deletes).
+    Remove(commands::delete::DeleteArgs),
 }
 
 fn main() {
@@ -73,6 +77,8 @@ fn main() {
         Commands::List(args) => commands::list::execute(args, &cli.global),
         Commands::Get(args) => commands::get::execute(args, &cli.global),
         Commands::Healthcheck => commands::healthcheck::execute(&cli.global),
+        Commands::Add(args) => commands::add::execute(args, &cli.global),
+        Commands::Remove(args) => commands::remove::execute(args, &cli.global),
     };
 
     if let Err(e) = result {

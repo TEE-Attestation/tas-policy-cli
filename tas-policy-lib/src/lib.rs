@@ -94,8 +94,9 @@ pub mod policy;
 pub mod signing;
 
 pub use client::{
-    ApiResponse, CheckResult, CheckStatus, DeprecationInfo, GetPolicyResponse, HealthCheckConfig,
-    HealthReport, LinkEntry, TasClient, TasClientBuilder, diagnose_connection,
+    AddResult, ApiResponse, CheckResult, CheckStatus, CreateResult, DeprecationInfo,
+    GetPolicyResponse, HealthCheckConfig, HealthReport, LinkEntry, RemoveResult, TasClient,
+    TasClientBuilder, UpdateResult, diagnose_connection,
 };
 pub use config::Config;
 pub use error::{Error, Result};

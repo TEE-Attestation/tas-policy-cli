@@ -222,6 +222,71 @@ impl TasClient {
         Ok(ApiResponse::new((), Some(deprecation)))
     }
 
+    /// Add a policy via the experimental endpoint.
+    ///
+    /// If the policy does not yet exist it is created with count=1.
+    /// If an identical policy already exists its count is incremented.
+    ///
+    /// Sends `POST /experimental/policy/v0/add`.
+    pub fn add_policy<P: Into<Policy>>(
+        &self,
+        policy: P,
+        signing_key: &SigningKey,
+    ) -> Result<ApiResponse<AddResult>> {
+        let policy = policy.into();
+        let mut envelope = Self::build_envelope(&policy)?;
+        sign_envelope(signing_key, &mut envelope)?;
+
+        let (body, deprecation) = self.post("/experimental/policy/v0/add", &envelope)?;
+        let resp: serde_json::Value = serde_json::from_str(&body)?;
+        let message = resp
+            .get("message")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let warning = resp
+            .get("warning")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        Ok(ApiResponse::new(
+            AddResult {
+                policy_key: format!(
+                    "policy:{}:{}",
+                    envelope.metadata.policy_type, envelope.metadata.key_id
+                ),
+                message,
+                warning,
+            },
+            Some(deprecation),
+        ))
+    }
+
+    /// Remove a policy via the experimental endpoint.
+    ///
+    /// Decrements the policy's count. If the count reaches zero the policy
+    /// is deleted entirely.
+    ///
+    /// Sends `DELETE /experimental/policy/v0/remove/{policy_key}`.
+    pub fn remove_policy(&self, policy_key: &str) -> Result<ApiResponse<RemoveResult>> {
+        let path = format!("/experimental/policy/v0/remove/{}", policy_key);
+        let (body, deprecation) = self.delete_request(&path)?;
+        let resp: serde_json::Value = serde_json::from_str(&body)?;
+        let message = resp
+            .get("message")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        Ok(ApiResponse::new(
+            RemoveResult {
+                policy_key: policy_key.to_string(),
+                message,
+            },
+            Some(deprecation),
+        ))
+    }
+
     /// List all policies, optionally filtered.
     ///
     /// Sends `GET /policy/v0/list`. The API returns all policies;
@@ -597,6 +662,21 @@ pub struct CreateResult {
 #[derive(Debug, Clone)]
 pub struct UpdateResult {
     pub policy_key: String,
+}
+
+/// Result of a successful policy add (experimental).
+#[derive(Debug, Clone)]
+pub struct AddResult {
+    pub policy_key: String,
+    pub message: String,
+    pub warning: Option<String>,
+}
+
+/// Result of a successful policy remove (experimental).
+#[derive(Debug, Clone)]
+pub struct RemoveResult {
+    pub policy_key: String,
+    pub message: String,
 }
 
 /// Summary of a policy for list operations.
