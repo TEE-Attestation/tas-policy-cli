@@ -39,12 +39,14 @@ pub fn execute(args: CreateArgs, global: &GlobalOpts) -> anyhow::Result<()> {
         )?)
     };
 
+    let components = convert::into_components(&args.component);
+
     if args.dry_run {
-        signing::dry_run(&policy, signing_key.as_ref())?;
+        signing::dry_run(&policy, components, signing_key.as_ref())?;
         return Ok(());
     }
 
-    let policy_id = signing::upload(policy, signing_key.as_ref(), global)?;
+    let policy_id = signing::upload(policy, components, signing_key.as_ref(), global)?;
     println!("Policy created: {}", policy_id);
     Ok(())
 }

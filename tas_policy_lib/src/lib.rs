@@ -81,7 +81,7 @@
 //!     let policy = TdxPolicy::with_mrtd("vm-123-policy", "vm-123-key", "b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c700000000")?;
 //!     let key = SigningKey::from_file("/etc/tas/key.pem", None)?;
 //!     
-//!     let result = client.create_policy(policy, Some(&key))?;
+//!     let result = client.create_policy(policy, None, Some(&key))?;
 //!     println!("Created: {}", result.data.policy_id);
 //!     Ok(())
 //! }
@@ -100,11 +100,12 @@ pub use client::{
 pub use config::Config;
 pub use error::{Error, Result};
 pub use policy::{
-    CvmType, ExactMatchString, ExactMatchU8, MeasurementHash, MinValue, Policy, PolicyMetadata,
-    PolicySignature, ProcessorFamily, SevConfig, SevCurrentTcb, SevOverrides, SevPlatformInfo,
-    SevPolicy, SevPolicyBuilder, SevSecurityFlags, SevTcbConfig, SevValidationRules,
-    SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate, TdxBodyRules, TdxConfig,
-    TdxMeasurements, TdxOverrides, TdxPolicy, TdxPolicyBuilder, TdxTcbRules, TdxValidationRules,
-    ValidationError, ValidationRules,
+    AuthorizationRules, CertChainClaim, Components, CvmType, DetachedClaims, ExactMatchString,
+    ExactMatchU8, GpuComponent, GpuPolicy, MeasurementHash, MinValue, OverallClaims, Policy,
+    PolicyMetadata, PolicySignature, ProcessorFamily, SevConfig, SevCurrentTcb, SevOverrides,
+    SevPlatformInfo, SevPolicy, SevPolicyBuilder, SevSecurityFlags, SevTcbConfig,
+    SevValidationRules, SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate, TdxBodyRules,
+    TdxConfig, TdxMeasurements, TdxOverrides, TdxPolicy, TdxPolicyBuilder, TdxTcbRules,
+    TdxValidationRules, ValidationError, ValidationRules,
 };
 pub use signing::{Signature, SigningKey, sign_envelope};

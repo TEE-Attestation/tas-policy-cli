@@ -14,6 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::components::Components;
 use super::sev::{SevPlatformInfo, SevPolicy, SevSecurityFlags, SevTcbConfig};
 use super::tdx::{TcbConfig, TcbStatus, TcbUpdate, TdxMeasurements, TdxPolicy};
 use super::types::{MeasurementHash, PolicyMetadata};
@@ -37,6 +38,8 @@ use crate::signing::Signature;
 pub struct SignedPolicyEnvelope {
     pub metadata: PolicyMetadata,
     pub validation_rules: ValidationRules,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub components: Option<Components>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signature: Option<PolicySignature>,
 }
@@ -299,6 +302,7 @@ impl SignedPolicyEnvelope {
                 body,
                 min_tee_tcb_svn: policy.min_tee_tcb_svn,
             })),
+            components: None,
             signature,
         }
     }
@@ -358,6 +362,7 @@ impl SignedPolicyEnvelope {
                         }),
                     }),
             }),
+            components: None,
             signature,
         }
     }

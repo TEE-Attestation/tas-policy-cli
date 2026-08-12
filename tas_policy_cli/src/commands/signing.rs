@@ -7,7 +7,9 @@
 
 use std::path::PathBuf;
 
-use tas_policy_lib::{Policy, PolicySignature, SignedPolicyEnvelope, SigningKey, sign_envelope};
+use tas_policy_lib::{
+    Components, Policy, PolicySignature, SignedPolicyEnvelope, SigningKey, sign_envelope,
+};
 use zeroize::Zeroize;
 
 use crate::args::GlobalOpts;
@@ -55,8 +57,13 @@ fn build_envelope(policy: &Policy, unsigned: bool) -> SignedPolicyEnvelope {
 ///
 /// If `signing_key` is provided, the envelope is signed before printing.
 /// If `None`, the envelope is printed unsigned.
-pub fn dry_run(policy: &Policy, signing_key: Option<&SigningKey>) -> anyhow::Result<()> {
+pub fn dry_run(
+    policy: &Policy,
+    components: Option<Components>,
+    signing_key: Option<&SigningKey>,
+) -> anyhow::Result<()> {
     let mut envelope = build_envelope(policy, signing_key.is_none());
+    envelope.components = components;
     if let Some(key) = signing_key {
         sign_envelope(key, &mut envelope)?;
     }
@@ -69,13 +76,14 @@ pub fn dry_run(policy: &Policy, signing_key: Option<&SigningKey>) -> anyhow::Res
 /// Returns the policy ID on success.
 pub fn upload(
     policy: Policy,
+    components: Option<Components>,
     signing_key: Option<&SigningKey>,
     global: &GlobalOpts,
 ) -> anyhow::Result<String> {
     let client = convert::build_client(global)?;
     let result = match policy {
-        Policy::Tdx(tdx) => client.create_policy(*tdx, signing_key),
-        Policy::Sev(sev) => client.create_policy(*sev, signing_key),
+        Policy::Tdx(tdx) => client.create_policy(*tdx, components, signing_key),
+        Policy::Sev(sev) => client.create_policy(*sev, components, signing_key),
     }
     .map_err(|e| anyhow::anyhow!("Failed to create policy: {}", e))?;
 

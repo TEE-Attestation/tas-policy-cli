@@ -239,6 +239,13 @@ pub struct CreateArgs {
     /// Require SMT enabled on host platform. [SEV only]
     #[arg(long)]
     pub smt_enabled: Option<bool>,
+
+    // =========================================================================
+    // Components (attestable sub-components attached to the policy)
+    // =========================================================================
+    /// Attach a component policy section (repeatable), e.g. --component gpu-nvidia.
+    #[arg(long, value_enum)]
+    pub component: Vec<ComponentArg>,
 }
 
 // =============================================================================
@@ -255,6 +262,14 @@ pub enum CvmTypeArg {
     /// AMD Secure Encrypted Virtualization
     #[value(alias = "sev")]
     Sev,
+}
+
+/// Attestable component selector for `--component`.
+#[derive(ValueEnum, Clone, Debug, PartialEq, Eq)]
+pub enum ComponentArg {
+    /// NVIDIA GPU (adds the default `components.gpu.gpu-nvidia` section).
+    #[value(name = "gpu-nvidia")]
+    GpuNvidia,
 }
 
 /// Processor family enum for CLI.
@@ -483,6 +498,11 @@ pub struct UpdateArgs {
     /// Preview the merged policy without uploading.
     #[arg(long)]
     pub dry_run: bool,
+
+    /// Add a component section if absent (repeatable), e.g. --component gpu-nvidia.
+    /// Existing component sections are preserved unchanged.
+    #[arg(long, value_enum)]
+    pub component: Vec<ComponentArg>,
 
     /// Fields to override in the existing policy.
     #[command(flatten)]

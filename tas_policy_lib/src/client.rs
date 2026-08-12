@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::error::{Error, Result};
 use crate::policy::Policy;
+use crate::policy::components::Components;
 use crate::policy::signed::{PolicySignature, SignedPolicyEnvelope};
 use crate::signing::{SigningKey, sign_envelope};
 //use log::{debug, error, info, warn};
@@ -163,6 +164,7 @@ impl TasClient {
     pub fn create_policy<P: Into<Policy>>(
         &self,
         policy: P,
+        components: Option<Components>,
         signing_key: Option<&SigningKey>,
     ) -> Result<ApiResponse<CreateResult>> {
         let policy = policy.into();
@@ -171,6 +173,7 @@ impl TasClient {
             Some(_) => Self::build_envelope(&policy)?,
             None => Self::build_unsigned_envelope(&policy)?,
         };
+        envelope.components = components;
         if let Some(key) = signing_key {
             sign_envelope(key, &mut envelope)?;
         }

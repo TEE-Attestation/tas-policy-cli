@@ -5,9 +5,12 @@
 //
 // This module provides conversion functions to map CLI argument types to library types.
 
-use crate::args::{CreateArgs, PolicyOverrides, ProcessorFamilyArg, TcbStatusArg, TcbUpdateArg};
+use crate::args::{
+    ComponentArg, CreateArgs, PolicyOverrides, ProcessorFamilyArg, TcbStatusArg, TcbUpdateArg,
+};
 use tas_policy_lib::{
-    ProcessorFamily, SevConfig, SevOverrides, TcbStatus, TcbUpdate, TdxConfig, TdxOverrides,
+    Components, GpuComponent, ProcessorFamily, SevConfig, SevOverrides, TcbStatus, TcbUpdate,
+    TdxConfig, TdxOverrides,
 };
 
 // =============================================================================
@@ -112,6 +115,27 @@ pub fn into_sev_config(args: &CreateArgs) -> anyhow::Result<SevConfig> {
         alias_check_complete: args.alias_check_complete,
         smt_enabled: args.smt_enabled,
     })
+}
+
+// =============================================================================
+// CreateArgs → Components
+// =============================================================================
+
+/// Build a `components` section from `--component` flags (each adds its default section).
+pub fn into_components(requested: &[ComponentArg]) -> Option<Components> {
+    let mut components = Components::default();
+    for component in requested {
+        match component {
+            ComponentArg::GpuNvidia => {
+                components.gpu = Some(GpuComponent::nvidia_default());
+            }
+        }
+    }
+    if components.is_empty() {
+        None
+    } else {
+        Some(components)
+    }
 }
 
 // =============================================================================

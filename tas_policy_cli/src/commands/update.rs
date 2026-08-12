@@ -11,7 +11,7 @@ use crate::args::{GlobalOpts, UpdateArgs};
 use crate::commands::signing;
 use crate::convert;
 use log::info;
-use tas_policy_lib::Policy;
+use tas_policy_lib::{Components, Policy};
 
 /// Execute the update command.
 ///
@@ -27,10 +27,15 @@ pub fn execute(args: UpdateArgs, global: &GlobalOpts) -> anyhow::Result<()> {
 
     // Fetch existing policy (server returns envelope format, convert to domain model)
     info!("Fetching existing policy '{}'...", args.policy_id);
-    let mut policy = client
+    let fetched = client
         .get_policy(&args.policy_id)
-        .and_then(|resp| resp.data.to_policy())
         .map_err(|e| anyhow::anyhow!("Failed to fetch policy '{}': {}", args.policy_id, e))?;
+    // The `components` section is not part of the Policy model, so carry it across untouched.
+    let mut components = fetched.data.policy.components.clone();
+    let mut policy = fetched
+        .data
+        .to_policy()
+        .map_err(|e| anyhow::anyhow!("Failed to convert policy '{}': {}", args.policy_id, e))?;
 
     // Validate: reject overrides that don't match the fetched policy's CVM type
     match &policy {
@@ -83,8 +88,15 @@ pub fn execute(args: UpdateArgs, global: &GlobalOpts) -> anyhow::Result<()> {
         )?)
     };
 
+    // Add requested component sections that are absent; existing ones are left unchanged.
+    if let Some(requested) = convert::into_components(&args.component) {
+        components
+            .get_or_insert_with(Components::default)
+            .fill_missing_from(&requested);
+    }
+
     if args.dry_run {
-        signing::dry_run(&policy, signing_key.as_ref())?;
+        signing::dry_run(&policy, components, signing_key.as_ref())?;
         return Ok(());
     }
 
@@ -96,7 +108,7 @@ pub fn execute(args: UpdateArgs, global: &GlobalOpts) -> anyhow::Result<()> {
 
     // Create the updated policy
     info!("Creating updated policy '{}'...", args.policy_id);
-    let policy_id = signing::upload(policy, signing_key.as_ref(), global)?;
+    let policy_id = signing::upload(policy, components, signing_key.as_ref(), global)?;
     println!("Policy '{}' updated successfully.", policy_id);
     Ok(())
 }
