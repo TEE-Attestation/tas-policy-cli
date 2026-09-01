@@ -6,6 +6,7 @@
 // This module provides policy types and builders for TDX and SEV attestation policies.
 
 pub mod components;
+pub mod domain;
 pub mod gpu;
 pub mod sev;
 pub mod signed;
@@ -14,6 +15,7 @@ pub mod types;
 pub mod validation;
 
 pub use components::Components;
+pub use domain::{DomainPolicyEnvelope, DomainPolicyMetadata};
 pub use gpu::{
     AuthorizationRules, CertChainClaim, DetachedClaims, GpuComponent, GpuPolicy, OverallClaims,
 };

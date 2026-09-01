@@ -54,8 +54,8 @@ impl From<TcbStatusArg> for TcbStatus {
 pub fn into_tdx_config(args: &CreateArgs) -> TdxConfig {
     TdxConfig {
         policy_id: args.policy_id.clone(),
-        key_id: args.key_id.clone(),
-        name: args.name.clone(),
+        key_id: args.key_id.clone().unwrap_or_default(),
+        name: args.name.clone().unwrap_or_else(|| args.policy_id.clone()),
         version: None,
         description: args.description.clone(),
         // Measurements
@@ -91,8 +91,8 @@ pub fn into_sev_config(args: &CreateArgs) -> anyhow::Result<SevConfig> {
 
     Ok(SevConfig {
         policy_id: args.policy_id.clone(),
-        key_id: args.key_id.clone(),
-        name: args.name.clone(),
+        key_id: args.key_id.clone().unwrap_or_default(),
+        name: args.name.clone().unwrap_or_else(|| args.policy_id.clone()),
         description: args.description.clone(),
         measurement: args.measurement.clone(),
         host_data: args.host_data.clone(),

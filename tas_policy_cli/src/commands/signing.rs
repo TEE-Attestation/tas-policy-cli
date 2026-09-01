@@ -90,3 +90,24 @@ pub fn upload(
     crate::output::maybe_show_deprecation(&result, global.verbose);
     Ok(result.data.policy_id)
 }
+
+/// Upload a certify-policy to TAS (signed or unsigned).
+///
+/// Same as [`upload`] but targets the certify-flow certify-policy endpoint
+/// (`POST /management/certify-policy/v0/store`). Returns the policy ID.
+pub fn upload_certify_policy(
+    policy: Policy,
+    components: Option<Components>,
+    signing_key: Option<&SigningKey>,
+    global: &GlobalOpts,
+) -> anyhow::Result<String> {
+    let client = convert::build_client(global)?;
+    let result = match policy {
+        Policy::Tdx(tdx) => client.create_certify_policy(*tdx, components, signing_key),
+        Policy::Sev(sev) => client.create_certify_policy(*sev, components, signing_key),
+    }
+    .map_err(|e| anyhow::anyhow!("Failed to create certify-policy: {}", e))?;
+
+    crate::output::maybe_show_deprecation(&result, global.verbose);
+    Ok(result.data.policy_id)
+}

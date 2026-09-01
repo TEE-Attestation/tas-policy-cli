@@ -89,7 +89,7 @@ pub struct PolicyMetadata {
     pub policy_type: String,
     #[serde(default)]
     pub policy_id: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub key_id: String,
     #[serde(default)]
     pub name: String,

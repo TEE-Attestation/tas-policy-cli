@@ -100,12 +100,12 @@ pub use client::{
 pub use config::Config;
 pub use error::{Error, Result};
 pub use policy::{
-    AuthorizationRules, CertChainClaim, Components, CvmType, DetachedClaims, ExactMatchString,
-    ExactMatchU8, GpuComponent, GpuPolicy, MeasurementHash, MinValue, OverallClaims, Policy,
-    PolicyMetadata, PolicySignature, ProcessorFamily, SevConfig, SevCurrentTcb, SevOverrides,
-    SevPlatformInfo, SevPolicy, SevPolicyBuilder, SevSecurityFlags, SevTcbConfig,
-    SevValidationRules, SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate, TdxBodyRules,
-    TdxConfig, TdxMeasurements, TdxOverrides, TdxPolicy, TdxPolicyBuilder, TdxTcbRules,
-    TdxValidationRules, ValidationError, ValidationRules,
+    AuthorizationRules, CertChainClaim, Components, CvmType, DetachedClaims, DomainPolicyEnvelope,
+    DomainPolicyMetadata, ExactMatchString, ExactMatchU8, GpuComponent, GpuPolicy, MeasurementHash,
+    MinValue, OverallClaims, Policy, PolicyMetadata, PolicySignature, ProcessorFamily, SevConfig,
+    SevCurrentTcb, SevOverrides, SevPlatformInfo, SevPolicy, SevPolicyBuilder, SevSecurityFlags,
+    SevTcbConfig, SevValidationRules, SignedPolicyEnvelope, TcbConfig, TcbStatus, TcbUpdate,
+    TdxBodyRules, TdxConfig, TdxMeasurements, TdxOverrides, TdxPolicy, TdxPolicyBuilder,
+    TdxTcbRules, TdxValidationRules, ValidationError, ValidationRules,
 };
-pub use signing::{Signature, SigningKey, sign_envelope};
+pub use signing::{Signature, SigningKey, sign_domain_envelope, sign_envelope};

@@ -5,6 +5,7 @@
 //
 // This module provides the CLI command implementations.
 
+pub mod certify;
 pub mod create;
 pub mod delete;
 pub mod get;

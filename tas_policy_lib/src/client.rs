@@ -5,6 +5,7 @@
 //
 // This module provides TAS API client for policy operations
 
+use std::collections::BTreeMap;
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -13,13 +14,20 @@ use std::time::{Duration, Instant};
 use crate::error::{Error, Result};
 use crate::policy::Policy;
 use crate::policy::components::Components;
+use crate::policy::domain::DomainPolicyEnvelope;
 use crate::policy::signed::{PolicySignature, SignedPolicyEnvelope};
-use crate::signing::{SigningKey, sign_envelope};
+use crate::signing::{SigningKey, sign_domain_envelope, sign_envelope};
 //use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 
 /// Base path for the TAS management policy API.
 const POLICY_API_BASE: &str = "/management/policy/v0";
+
+/// Base path for the certify-flow certify-policy management API.
+const CERTIFY_POLICY_API_BASE: &str = "/management/certify-policy/v0";
+
+/// Base path for the certify-flow domain-policy management API.
+const DOMAIN_POLICY_API_BASE: &str = "/management/domain-policy/v0";
 
 /// TAS API client for policy operations.
 pub struct TasClient {
@@ -167,6 +175,30 @@ impl TasClient {
         components: Option<Components>,
         signing_key: Option<&SigningKey>,
     ) -> Result<ApiResponse<CreateResult>> {
+        self.create_policy_at(POLICY_API_BASE, policy, components, signing_key)
+    }
+
+    /// Create and upload a new certify-policy for the certify flow.
+    ///
+    /// Same as [`create_policy`](Self::create_policy) but targets the separate
+    /// `POST /management/certify-policy/v0/store` endpoint.
+    pub fn create_certify_policy<P: Into<Policy>>(
+        &self,
+        policy: P,
+        components: Option<Components>,
+        signing_key: Option<&SigningKey>,
+    ) -> Result<ApiResponse<CreateResult>> {
+        self.create_policy_at(CERTIFY_POLICY_API_BASE, policy, components, signing_key)
+    }
+
+    /// Shared implementation for creating a policy at a given API base path.
+    fn create_policy_at<P: Into<Policy>>(
+        &self,
+        base: &str,
+        policy: P,
+        components: Option<Components>,
+        signing_key: Option<&SigningKey>,
+    ) -> Result<ApiResponse<CreateResult>> {
         let policy = policy.into();
 
         let mut envelope = match signing_key {
@@ -179,12 +211,12 @@ impl TasClient {
         }
 
         let policy_id = policy.policy_id().to_string();
-        let (_body, deprecation) = self
-            .post(&format!("{}/store", POLICY_API_BASE), &envelope)
-            .map_err(|e| match e {
-                Error::ApiError { status: 409, .. } => Error::AlreadyExists(policy_id.clone()),
-                other => other,
-            })?;
+        let (_body, deprecation) =
+            self.post(&format!("{}/store", base), &envelope)
+                .map_err(|e| match e {
+                    Error::ApiError { status: 409, .. } => Error::AlreadyExists(policy_id.clone()),
+                    other => other,
+                })?;
 
         Ok(ApiResponse::new(
             CreateResult {
@@ -200,10 +232,22 @@ impl TasClient {
     /// Sends `DELETE /management/policy/v0/delete/{policy_id}`.
     /// Returns `Error::NotFound` if the policy does not exist on the server.
     pub fn delete_policy(&self, policy_id: &str) -> Result<ApiResponse<()>> {
-        let path = format!("{}/delete/{}", POLICY_API_BASE, policy_id);
+        self.delete_at(POLICY_API_BASE, policy_id, "policy")
+    }
+
+    /// Delete a certify-policy by ID.
+    ///
+    /// Sends `DELETE /management/certify-policy/v0/delete/{policy_id}`.
+    pub fn delete_certify_policy(&self, policy_id: &str) -> Result<ApiResponse<()>> {
+        self.delete_at(CERTIFY_POLICY_API_BASE, policy_id, "certify-policy")
+    }
+
+    /// Shared implementation for deleting an object at a given API base path.
+    fn delete_at(&self, base: &str, id: &str, label: &str) -> Result<ApiResponse<()>> {
+        let path = format!("{}/delete/{}", base, id);
         let (_body, deprecation) = self.delete_request(&path).map_err(|e| match e {
             Error::ApiError { status: 404, .. } => {
-                Error::NotFound(format!("policy '{}' does not exist", policy_id))
+                Error::NotFound(format!("{} '{}' does not exist", label, id))
             }
             other => other,
         })?;
@@ -218,7 +262,26 @@ impl TasClient {
         &self,
         filter: Option<ListFilter>,
     ) -> Result<ApiResponse<Vec<PolicySummary>>> {
-        let (response, deprecation) = self.get(&format!("{}/list", POLICY_API_BASE))?;
+        self.list_policies_at(POLICY_API_BASE, filter)
+    }
+
+    /// List all certify-policies, optionally filtered.
+    ///
+    /// Sends `GET /management/certify-policy/v0/list`.
+    pub fn list_certify_policies(
+        &self,
+        filter: Option<ListFilter>,
+    ) -> Result<ApiResponse<Vec<PolicySummary>>> {
+        self.list_policies_at(CERTIFY_POLICY_API_BASE, filter)
+    }
+
+    /// Shared implementation for listing policies at a given API base path.
+    fn list_policies_at(
+        &self,
+        base: &str,
+        filter: Option<ListFilter>,
+    ) -> Result<ApiResponse<Vec<PolicySummary>>> {
+        let (response, deprecation) = self.get(&format!("{}/list", base))?;
         let wrapper: ListResponse = serde_json::from_str(&response)?;
         let mut summaries = wrapper.policies;
 
@@ -234,10 +297,89 @@ impl TasClient {
     /// Sends `GET /management/policy/v0/get/{policy_id}`.
     /// The server returns a JSON object with `policy_id` and `policy` fields.
     pub fn get_policy(&self, policy_id: &str) -> Result<ApiResponse<GetPolicyResponse>> {
-        let path = format!("{}/get/{}", POLICY_API_BASE, policy_id);
+        self.get_policy_at(POLICY_API_BASE, policy_id)
+    }
+
+    /// Get a specific certify-policy by ID.
+    ///
+    /// Sends `GET /management/certify-policy/v0/get/{policy_id}`.
+    pub fn get_certify_policy(&self, policy_id: &str) -> Result<ApiResponse<GetPolicyResponse>> {
+        self.get_policy_at(CERTIFY_POLICY_API_BASE, policy_id)
+    }
+
+    /// Shared implementation for getting a policy at a given API base path.
+    fn get_policy_at(&self, base: &str, policy_id: &str) -> Result<ApiResponse<GetPolicyResponse>> {
+        let path = format!("{}/get/{}", base, policy_id);
         let (response, deprecation) = self.get(&path)?;
         let get_resp: GetPolicyResponse = serde_json::from_str(&response)?;
         Ok(ApiResponse::new(get_resp, Some(deprecation)))
+    }
+
+    // -------------------------------------------------------------------------
+    // Domain-policies (certify flow)
+    // -------------------------------------------------------------------------
+
+    /// Create and upload a new domain-policy.
+    ///
+    /// Signs the envelope when `signing_key` is provided, then POSTs it to
+    /// `POST /management/domain-policy/v0/store`. Returns `Error::AlreadyExists`
+    /// if a domain-policy with the same policy id already exists.
+    pub fn create_domain_policy(
+        &self,
+        mut envelope: DomainPolicyEnvelope,
+        signing_key: Option<&SigningKey>,
+    ) -> Result<ApiResponse<DomainCreateResult>> {
+        match signing_key {
+            Some(key) => sign_domain_envelope(key, &mut envelope)?,
+            None => envelope.signature = None,
+        }
+
+        let policy_id = envelope.metadata.policy_id.clone();
+        let (_body, deprecation) = self
+            .post(&format!("{}/store", DOMAIN_POLICY_API_BASE), &envelope)
+            .map_err(|e| match e {
+                Error::ApiError { status: 409, .. } => Error::AlreadyExists(policy_id.clone()),
+                other => other,
+            })?;
+
+        Ok(ApiResponse::new(
+            DomainCreateResult { policy_id },
+            Some(deprecation),
+        ))
+    }
+
+    /// Get a domain-policy by id.
+    ///
+    /// Sends `GET /management/domain-policy/v0/get/{policy_id}`.
+    pub fn get_domain_policy(
+        &self,
+        policy_id: &str,
+    ) -> Result<ApiResponse<GetDomainPolicyResponse>> {
+        let path = format!("{}/get/{}", DOMAIN_POLICY_API_BASE, policy_id);
+        let (response, deprecation) = self.get(&path).map_err(|e| match e {
+            Error::ApiError { status: 404, .. } => {
+                Error::NotFound(format!("domain policy '{}' does not exist", policy_id))
+            }
+            other => other,
+        })?;
+        let parsed: GetDomainPolicyResponse = serde_json::from_str(&response)?;
+        Ok(ApiResponse::new(parsed, Some(deprecation)))
+    }
+
+    /// List all domain-policies.
+    ///
+    /// Sends `GET /management/domain-policy/v0/list`.
+    pub fn list_domain_policies(&self) -> Result<ApiResponse<Vec<DomainPolicySummary>>> {
+        let (response, deprecation) = self.get(&format!("{}/list", DOMAIN_POLICY_API_BASE))?;
+        let wrapper: DomainListResponse = serde_json::from_str(&response)?;
+        Ok(ApiResponse::new(wrapper.domain_policies, Some(deprecation)))
+    }
+
+    /// Delete a domain-policy by id.
+    ///
+    /// Sends `DELETE /management/domain-policy/v0/delete/{policy_id}`.
+    pub fn delete_domain_policy(&self, policy_id: &str) -> Result<ApiResponse<()>> {
+        self.delete_at(DOMAIN_POLICY_API_BASE, policy_id, "domain policy")
     }
 
     /// Check connectivity and authentication.
@@ -578,6 +720,45 @@ impl<T> ApiResponse<T> {
 pub struct CreateResult {
     pub policy_id: String,
     pub cvm_type: crate::policy::CvmType,
+}
+
+/// Result of a successful domain-policy creation.
+#[derive(Debug, Clone)]
+pub struct DomainCreateResult {
+    pub policy_id: String,
+}
+
+/// Summary of a domain-policy for list operations.
+///
+/// Matches the shape returned by `GET /management/domain-policy/v0/list`:
+/// ```json
+/// { "policy_id": "...", "description": "...", "certify_policies": {...}, "signed": false }
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainPolicySummary {
+    pub policy_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub certify_policies: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
+    pub signed: bool,
+}
+
+/// Response from `GET /management/domain-policy/v0/get/{policy_id}`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetDomainPolicyResponse {
+    pub policy_id: String,
+    pub domain_policy: crate::policy::domain::DomainPolicyEnvelope,
+}
+
+/// Response wrapper for `GET /management/domain-policy/v0/list`.
+#[derive(Debug, Clone, Deserialize)]
+struct DomainListResponse {
+    domain_policies: Vec<DomainPolicySummary>,
+    #[serde(default)]
+    #[allow(dead_code)]
+    count: usize,
 }
 
 /// Summary of a policy for list operations.
@@ -976,6 +1157,7 @@ pub struct ValidationReport {
 pub struct GetPolicyResponse {
     #[serde(alias = "policy_key")]
     pub policy_id: String,
+    #[serde(alias = "certify_policy")]
     pub policy: crate::policy::signed::SignedPolicyEnvelope,
 }
 
@@ -1035,6 +1217,7 @@ pub fn filter_summaries(summaries: &mut Vec<PolicySummary>, filter: &ListFilter)
 /// Response wrapper for `GET /management/policy/v0/list`.
 #[derive(Debug, Clone, Deserialize)]
 struct ListResponse {
+    #[serde(alias = "certify_policies")]
     policies: Vec<PolicySummary>,
     #[serde(default)]
     #[allow(dead_code)]

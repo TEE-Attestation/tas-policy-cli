@@ -39,6 +39,8 @@ enum Commands {
     List(commands::list::ListArgs),
     /// Get details of an attestation policy.
     Get(commands::get::GetArgs),
+    /// Manage certify-flow domain-policies and certify-policies.
+    Certify(commands::certify::CertifyArgs),
     /// Check connectivity to the TAS server.
     Healthcheck,
 }
@@ -72,6 +74,7 @@ fn main() {
         Commands::Delete(args) => commands::delete::execute(args, &cli.global),
         Commands::List(args) => commands::list::execute(args, &cli.global),
         Commands::Get(args) => commands::get::execute(args, &cli.global),
+        Commands::Certify(args) => commands::certify::execute(args, &cli.global),
         Commands::Healthcheck => commands::healthcheck::execute(&cli.global),
     };
 

@@ -61,9 +61,11 @@ pub struct CreateArgs {
     #[arg(long)]
     pub policy_id: String,
 
-    /// Unique key identifier for the KMS secret to release.
+    /// Unique key identifier for the KMS secret to release. Required for
+    /// `create`; optional for `certify policy create` (certify-policies do not
+    /// release secrets).
     #[arg(long)]
-    pub key_id: String,
+    pub key_id: Option<String>,
 
     /// CVM type: TDX or SEV.
     #[arg(long, value_enum)]
@@ -85,9 +87,9 @@ pub struct CreateArgs {
     #[arg(long, conflicts_with = "signing_key")]
     pub unsigned: bool,
 
-    /// Human-readable policy name (required).
+    /// Human-readable policy name. Defaults to the policy id when omitted.
     #[arg(long)]
-    pub name: String,
+    pub name: Option<String>,
 
     /// Policy description.
     #[arg(long)]

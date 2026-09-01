@@ -17,7 +17,7 @@ terminal.
 - [Signing key setup](#signing-key-setup)
 - [Quick start](#quick-start)
 - [Global options](#global-options)
-- [Commands](#commands) — [create](#create--create-a-new-policy) · [list](#list--list-policies) · [get](#get--get-a-single-policy) · [update](#update--update-an-existing-policy) · [delete](#delete--delete-a-policy) · [healthcheck](#healthcheck--diagnose-connectivity)
+- [Commands](#commands) — [create](#create--create-a-new-policy) · [list](#list--list-policies) · [get](#get--get-a-single-policy) · [update](#update--update-an-existing-policy) · [delete](#delete--delete-a-policy) · [healthcheck](#healthcheck--diagnose-connectivity) · [certify](#certify--manage-domain-policies--certify-policies)
 - [Policy examples](#policy-examples) — [Intel TDX](#intel-tdx--default-tcb-only-policy) · [AMD SEV-SNP](#amd-sev-snp--default-genoa-policy)
 - [Verbose logging](#verbose-logging)
 - [Licence](#licence)
@@ -131,7 +131,7 @@ Create and upload a signed attestation policy. You must specify the CVM type
 | `--key-id` | Unique KMS key identifier (required) |
 | `--signing-key` | Path to signing key PEM file (required) |
 | `--signing-key-pass-file` | Path to file containing the signing key passphrase |
-| `--name` | Human-readable policy name (required) |
+| `--name` | Human-readable policy name (defaults to the policy id) |
 | `--description` | Policy description |
 | `--dry-run` | Preview the signed policy JSON without uploading |
 
@@ -364,6 +364,86 @@ When a check fails the command exits with code 1 and shows the failure:
 `--api-key-file` is **optional** for `healthcheck`. If omitted, the
 authentication check is shown as skipped so you can still diagnose
 network/TLS issues without an API key.
+
+### `certify` — Manage domain-policies & certify-policies
+
+The **certify flow** issues attestation-bound workload certificates against a
+*domain-policy* rather than a single policy. A domain-policy is a named object
+that references a list of *certify-policy* ids; a workload receives a
+certificate when its attestation satisfies **at least one** of them. These
+objects are stored and managed completely separately from the secret-release
+policies used by `create`/`list`/`get`/`update`/`delete`, and are only
+available when the TAS server has `TAS_CERTIFY_ENABLED` set.
+
+The command has two groups:
+
+- `certify policy` — manage **certify-policies** (attestation policies; same
+  structure and flags as a normal policy).
+- `certify domain` — manage **domain-policies** (named lists of certify-policy
+  ids).
+
+#### Certify-policies
+
+`certify policy create` accepts the same flags as
+[`create`](#create--create-a-new-policy) (TDX/SEV measurements, TCB settings,
+signing, `--dry-run`, …) but uploads to the certify-policy store. Unlike
+`create`, `--key-id` is optional here — certify-policies don't release secrets,
+so a `key_id` isn't required. (`--name` defaults to the policy id in both.)
+
+```bash
+# Create a certify-policy (same options as `create`)
+tas-policy certify policy create \
+  --policy-id sev-baseline \
+  --cvm-type SEV \
+  --key-id sev-release-key \
+  --signing-key signing-key.pem \
+  --name "SEV baseline" \
+  --processor-family genoa \
+  --measurement a1b2c3...  # replace with actual launch measurement (96 hex chars)
+
+# List / get / delete
+tas-policy certify policy list
+tas-policy certify policy list --filter-type SEV --key-id-prefix my-project
+tas-policy certify policy get --policy-id sev-baseline
+tas-policy certify policy delete --policy-id sev-baseline
+```
+
+#### Domain-policies
+
+A domain-policy groups the certify-policies it permits **by TEE type**, so
+AMD and Intel policies are never evaluated against each other's evidence. Use
+`--sev-policy-id` for AMD SEV-SNP and `--tdx-policy-id` for Intel TDX
+(each repeatable; at least one across the two is required).
+
+```bash
+# Create a domain-policy grouping certify-policies by TEE type
+tas-policy certify domain create \
+  --policy-id prod \
+  --description "Production workloads" \
+  --sev-policy-id sev-baseline \
+  --tdx-policy-id tdx-baseline \
+  --signing-key signing-key.pem
+
+# Preview the signed JSON without uploading
+tas-policy certify domain create --policy-id prod --sev-policy-id sev-baseline \
+  --signing-key signing-key.pem --dry-run
+
+# List / get / delete
+tas-policy certify domain list
+tas-policy certify domain get --policy-id prod
+tas-policy certify domain delete --policy-id prod
+```
+
+| `certify domain create` flag | Description |
+|------|-------------|
+| `--policy-id` | Domain-policy id — the value a workload requests and the SPIFFE path segment (required) |
+| `--sev-policy-id` | A certify-policy id evaluated for AMD SEV-SNP evidence; repeatable |
+| `--tdx-policy-id` | A certify-policy id evaluated for Intel TDX evidence; repeatable |
+| `--description` | Human-readable description |
+| `--signing-key` | Path to signing key PEM file (required unless `--unsigned`) |
+| `--signing-key-pass-file` | Path to file containing the signing key passphrase |
+| `--unsigned` | Create an unsigned domain-policy (no signature field) |
+| `--dry-run` | Preview the signed domain-policy JSON without uploading |
 
 ## Policy examples
 
